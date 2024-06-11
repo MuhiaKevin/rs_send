@@ -5,7 +5,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
-use sha256::try_digest;
+// use sha256::try_digest;
 
 
 // Preupload response
@@ -135,9 +135,8 @@ pub async fn send_files() {
     let pre_upload = PreUpload::build(&somethhing);
     let foo = serde_json::to_string(&pre_upload).unwrap();
 
-    println!("{foo}");
-
-    let url = "http://localhost:53317/api/localsend/v2/prepare-upload";
+    // let url = "http://192.168.2.107:53317/api/localsend/v2/prepare-upload";
+    let url = "http://localhost/api/localsend/v2/prepare-upload";
     
     // let json_data = r#"{
     //   "info": {
@@ -209,7 +208,6 @@ pub async fn send_files() {
 pub fn open_files_send() -> Vec<OpenFiles> {
     let mut open_files: Vec<OpenFiles> = vec![];
 
-
     let files: Vec<String> = env::args().collect();
     println!("{files:?}\n\n\n\n\n\n");
 
@@ -223,7 +221,8 @@ pub fn open_files_send() -> Vec<OpenFiles> {
 
         if file_path.exists() {
             let file_size = file_path.metadata().unwrap().size();
-            let file_sha256 = try_digest(file_path).unwrap();
+            // let file_sha256 = try_digest(file_path).unwrap(); FIX: This is is slow for now
+            let file_sha256 = String::from("Sha1asomsdashdjhjksad");
             let fp = File::open(file_path).unwrap();
             let id = format!("this_is_id_{}", index);
             let real_file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
@@ -234,7 +233,8 @@ pub fn open_files_send() -> Vec<OpenFiles> {
                 file_size,
                 file_pointer: fp,
                 file_sha256,
-                file_type: "text".to_string(),
+                // file_type: "text".to_string(), FIX: Change this
+                file_type: "video/mp4".to_string(),
                 preview: "*preview data*".to_string(),
             })
         }
