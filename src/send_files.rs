@@ -1,10 +1,11 @@
 use core::panic;
 use std::{collections::HashMap, env};
-use std::fs::File;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
-
+use tokio::fs::File;
+use reqwest::{multipart, Client};
 use serde::{Deserialize, Serialize};
+use tokio_util::codec::{BytesCodec, FramedRead};
 // use sha256::try_digest;
 
 
@@ -17,40 +18,41 @@ struct Response {
 }
 
 
+const HOST: &'static str = "http://192.168.2.101:53317";
 
-// for sending files after receiving the session id and file tokens
-#[derive(Debug)]
-struct SendFiles {
-    session_id: String,
-    files: Vec<FileSend>,
-}
-
-impl SendFiles {
-    fn build(response: Response) -> Self {
-        let mut files_to_send: Vec<FileSend> = vec![];
-
-        for item in response.files {
-            files_to_send.push(FileSend {
-                file_id: item.0,
-                file_token: item.1,
-            });
-        }
-
-        SendFiles {
-            session_id: response.session_id,
-            files: files_to_send,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct FileSend {
-    // file_name: String,
-    // file_pointer: File,
-    file_id: String,
-    file_token: String,
-}
-
+// // for sending files after receiving the session id and file tokens
+// #[derive(Debug)]
+// struct SendFiles {
+//     session_id: String,
+//     files: Vec<FileSend>,
+// }
+//
+// impl SendFiles {
+//     fn build(response: Response) -> Self {
+//         let mut files_to_send: Vec<FileSend> = vec![];
+//
+//         for item in response.files {
+//             files_to_send.push(FileSend {
+//                 file_id: item.0,
+//                 file_token: item.1,
+//             });
+//         }
+//
+//         SendFiles {
+//             session_id: response.session_id,
+//             files: files_to_send,
+//         }
+//     }
+// }
+//
+// #[derive(Debug)]
+// struct FileSend {
+//     // file_name: String,
+//     // file_pointer: File,
+//     file_id: String,
+//     file_token: String,
+// }
+//
 
 
 // struct for initially starting the application
@@ -124,19 +126,18 @@ impl<'a> PreUpload<'a >  {
 
         }
     }
-
-    fn send_pre_upload() { }
 }
 
 
 pub async fn send_files() {
-    let somethhing = open_files_send();
+    let somethhing = open_files_send().await;
 
     let pre_upload = PreUpload::build(&somethhing);
     let foo = serde_json::to_string(&pre_upload).unwrap();
 
-    // let url = "http://192.168.2.107:53317/api/localsend/v2/prepare-upload";
-    let url = "http://localhost/api/localsend/v2/prepare-upload";
+    // let url = "http://192.168.2.104:53317/api/localsend/v2/prepare-upload";
+    let url = format!("{HOST}/api/localsend/v2/prepare-upload");
+    // let url = "http://localhost:53117/api/localsend/v2/prepare-upload";
     
     // let json_data = r#"{
     //   "info": {
@@ -180,8 +181,7 @@ pub async fn send_files() {
         .unwrap();
 
     let response_body: Response = response.json().await.unwrap();
-    let something = SendFiles::build(response_body);
-    println!("{something:?}")
+    upload_files(response_body, somethhing).await;
 
 
 
@@ -205,7 +205,37 @@ pub async fn send_files() {
     // println!("files {:?}", files);
 }
 
-pub fn open_files_send() -> Vec<OpenFiles> {
+ async fn upload_files(response_body: Response, files: Vec<OpenFiles>) {
+    // let url =  format!("http://192.168.2.107:53317/api/localsend/v2/upload?sessionId={}&fileId={}&token={}");
+    let client = Client::new();
+
+    for file in files {
+        let token = response_body.files.get(&file.id).unwrap();
+        println!("token for file with id {:?} is {:?}", file.id, token);
+        let url =  format!("{HOST}/api/localsend/v2/upload?sessionId={}&fileId={}&token={}", response_body.session_id, file.id, token);
+
+        // read file body stream
+        let stream = FramedRead::new(file.file_pointer, BytesCodec::new());
+        let file_body = reqwest::Body::wrap_stream(stream);
+        
+        let part = multipart::Part::stream(file_body);
+
+        let form = reqwest::multipart::Form::new()
+            .text("resourceName", "filename.filetype")
+            .part("FileData", part);
+
+
+        let res = client
+            .post(url)
+            .multipart(form)
+            .send().await.unwrap();
+
+        println!("{}", res.status());
+        println!("body: \n{}", res.text().await.unwrap());
+    }
+}
+
+pub async fn open_files_send() -> Vec<OpenFiles> {
     let mut open_files: Vec<OpenFiles> = vec![];
 
     let files: Vec<String> = env::args().collect();
@@ -223,7 +253,8 @@ pub fn open_files_send() -> Vec<OpenFiles> {
             let file_size = file_path.metadata().unwrap().size();
             // let file_sha256 = try_digest(file_path).unwrap(); FIX: This is is slow for now
             let file_sha256 = String::from("Sha1asomsdashdjhjksad");
-            let fp = File::open(file_path).unwrap();
+            // let fp = File::open(file_path).unwrap();
+            let fp = File::open(file_path).await.unwrap();
             let id = format!("this_is_id_{}", index);
             let real_file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
 
