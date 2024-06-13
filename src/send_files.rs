@@ -1,5 +1,4 @@
-use core::panic;
-use std::{collections::HashMap, env};
+use std::collections::HashMap;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use tokio::fs::File;
@@ -8,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 
-const HOST: &'static str = "http://192.168.2.101:53317";
+const HOST: &'static str = "http://192.168.2.107:53317";
 
 // Preupload response
 #[derive(Debug, Deserialize)]
@@ -147,11 +146,11 @@ pub async fn send_files() {
 pub async fn open_files_send() -> Vec<OpenFiles> {
     let mut open_files: Vec<OpenFiles> = vec![];
 
-    let files: Vec<String> = env::args().collect();
+    let files: Vec<String> = std::env::args().collect();
     println!("{files:?}\n\n\n\n\n\n");
 
     if files.len() < 2 {
-        panic!("Please Enter some files")
+        eprintln!("Please Enter some files")
     }
 
 
