@@ -10,3 +10,13 @@ serde = { version = "1.0.203", features = ["derive"] } # allows us to parse json
 serde_json = "1.0.117"
 sha256 = "1.5.0"
 tokio-util = "0.7.11"
+anyhow = "1.0.86"
+
+
+# [profile.release]
+# lto = true
+# codegen-units = 1
+# panic = 'abort'
+# strip = true
+# opt-level = 'z' # only have smaller size after strip
+# rpath = true
