@@ -8,7 +8,6 @@ use tokio_util::codec::{BytesCodec, FramedRead};
 
 const HOST: &'static str = "http://192.168.2.107:53317";
 
-// Preupload response
 #[derive(Debug, Deserialize)]
 struct Response {
     #[serde(rename = "sessionId")]
@@ -16,7 +15,6 @@ struct Response {
     files: HashMap<String, String>,
 }
 
-// struct for initially starting the application
 #[derive(Debug, Serialize)]
 pub struct OpenFiles {
     id: String,
@@ -39,7 +37,6 @@ pub struct OpenFiles {
     preview: String,
 }
 
-// For sending preupload
 #[derive(Debug, Serialize)]
 struct PreUpload<'a> {
     info: Settings,
@@ -84,11 +81,9 @@ impl<'a> PreUpload<'a> {
     }
 }
 
-pub async fn send_files() -> anyhow::Result<()> {
-    let send_file_list = open_files_send().await;
-
+pub async fn send_files(file_args: Vec<String>) -> anyhow::Result<()> {
+    let send_file_list = open_files_send(file_args).await;
     let pre_upload = PreUpload::build(&send_file_list);
-
     let pre_upload_json = serde_json::to_string(&pre_upload)?;
 
     let pre_upload_url = format!("{HOST}/api/localsend/v2/prepare-upload");
@@ -103,14 +98,12 @@ pub async fn send_files() -> anyhow::Result<()> {
         .await?;
 
     let response_body: Response = response.json().await?;
-    let _ = upload_files(response_body, send_file_list).await;
+    let _ = upload_files(response_body, send_file_list, &client).await;
 
     Ok(())
 }
 
-async fn upload_files(response_body: Response, files: Vec<OpenFiles>) -> anyhow::Result<()> {
-    let client = Client::new();
-
+async fn upload_files(response_body: Response, files: Vec<OpenFiles>, client: &Client) -> anyhow::Result<()> {
     for file in files {
         let token = response_body.files.get(&file.id).unwrap();
         let url = format!(
@@ -118,7 +111,6 @@ async fn upload_files(response_body: Response, files: Vec<OpenFiles>) -> anyhow:
             response_body.session_id, file.id, token
         );
 
-        // read file body stream
         let stream = FramedRead::new(file.file_pointer, BytesCodec::new());
         let file_body = reqwest::Body::wrap_stream(stream);
 
@@ -129,23 +121,16 @@ async fn upload_files(response_body: Response, files: Vec<OpenFiles>) -> anyhow:
             .part("FileData", part);
 
         let res = client.post(url).multipart(form).send().await?;
-
-        println!("{}", res.status());
-        println!("body: \n{}", res.text().await?);
+        println!("Finsihed sending {}", file.file_name);
     }
 
     Ok(())
 }
 
-pub async fn open_files_send() -> Vec<OpenFiles> {
+pub async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
     let mut open_files: Vec<OpenFiles> = vec![];
-    let files: Vec<String> = std::env::args().collect();
 
-    if files.len() < 2 {
-        eprintln!("Please Enter some files")
-    }
-
-    for (index, file_name) in files[1..].into_iter().enumerate() {
+    for (index, file_name) in file_args[1..].into_iter().enumerate() {
         let file_path = Path::new(&file_name);
 
         if file_path.exists() {

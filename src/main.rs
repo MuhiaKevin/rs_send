@@ -10,6 +10,14 @@ async fn main() -> anyhow::Result<()> {
     // //discovery::udp_listen();
     // discovery::another_send().unwrap();
 
-    send_files().await?;
+    let file_args: Vec<String> = std::env::args().collect();
+
+    if file_args.len() < 2 {
+        eprintln!("Please Enter some files");
+        std::process::exit(1);
+    }
+
+    send_files(file_args).await?;
+
     Ok(())
 }
