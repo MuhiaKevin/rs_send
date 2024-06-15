@@ -1,16 +1,15 @@
 use reqwest::{multipart, Client};
 use serde::{Deserialize, Serialize};
 use std::os::unix::fs::MetadataExt;
-use std::path::{Path, PathBuf};
-use std::{collections::HashMap, fs::DirEntry};
+use std::path::Path;
+use std::collections::HashMap;
 use tokio::fs::File;
-use tokio::io;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
-const HOST: &'static str = "http://192.168.2.107:53317";
+pub const HOST: &'static str = "http://192.168.2.107:53317";
 
 #[derive(Debug, Deserialize)]
-struct Response {
+pub struct Response {
     #[serde(rename = "sessionId")]
     session_id: String,
     files: HashMap<String, String>,
@@ -164,59 +163,4 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
     }
 
     open_files
-}
-
-async fn open_folder_send(file_args: String) -> Vec<OpenFiles> {
-    let mut open_files: Vec<OpenFiles> = vec![];
-    let mut count = 0;
-    let folder_name = Path::new(&file_args);
-
-    let mut closure = |entry: &DirEntry| {
-        if entry.path().exists() && entry.path().is_file() && !entry.path().is_symlink() {
-            let path = entry.path();
-
-            let id = format!("this_is_id_{}", count);
-            let file_size = path.metadata().unwrap().size();
-            let real_file_name = path.file_name().unwrap().to_str().unwrap().to_string();
-            let file_sha256 = String::from("Sha1asomsdashdjhjksad");
-            let fp = open_file(path).await;
-
-            open_files.push(OpenFiles {
-                id,
-                file_name: real_file_name,
-                file_size,
-                file_pointer: fp,
-                file_sha256,
-                file_type: "video/mp4".to_string(),
-                preview: "*preview data*".to_string(),
-            });
-
-            count += 1;
-        }
-    };
-
-    let show_entry: Box<&mut dyn FnMut(&DirEntry)> = Box::new(&mut closure);
-    visit_dirs(folder_name, *show_entry).unwrap();
-
-    open_files
-}
-
-async fn open_file(path: PathBuf) -> File {
-    let fp = File::open(path).await.unwrap();
-    fp
-}
-
-fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry)) -> io::Result<()> {
-    if dir.is_dir() {
-        for entry in std::fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                visit_dirs(&path, cb)?;
-            } else {
-                cb(&entry);
-            }
-        }
-    }
-    Ok(())
 }

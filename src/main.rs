@@ -1,15 +1,12 @@
 // mod discovery;
 mod send_files;
+mod send_folder;
 
-use send_files::send_files;
+// use send_files::send_files;
+use send_folder::send_folder;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // std::thread::spawn(|| discovery::get_discovered_by_clients());
-    // //get_discovered_by_clients();
-    // //discovery::udp_listen();
-    // discovery::another_send().unwrap();
-
     let file_args: Vec<String> = std::env::args().collect();
 
     if file_args.len() < 2 {
@@ -17,7 +14,9 @@ async fn main() -> anyhow::Result<()> {
         std::process::exit(1);
     }
 
-    send_files(file_args).await?;
+    // send_files(file_args).await?;
+    send_folder(file_args[1].clone()).await?;
+    // send_files(file_args).await?;
 
     Ok(())
 }
