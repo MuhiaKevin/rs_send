@@ -1,18 +1,18 @@
 use reqwest::{multipart, Client};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
-use std::collections::HashMap;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
-pub const HOST: &'static str = "http://192.168.2.107:53317";
+pub const HOST: &'static str = "http://192.168.2.102:53317";
 
 #[derive(Debug, Deserialize)]
 pub struct Response {
     #[serde(rename = "sessionId")]
-    session_id: String,
-    files: HashMap<String, String>,
+    pub session_id: String,
+    pub files: HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize)]
