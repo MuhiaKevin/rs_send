@@ -67,6 +67,7 @@ impl<'a> PreUpload<'a> {
     }
 }
 
+// FIX: Problem getting all the files in a folder
 fn process_directory(
     path: &Path,
     root_dir: &str,
