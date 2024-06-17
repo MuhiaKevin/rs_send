@@ -5,6 +5,9 @@ mod send_folder;
 // use send_files::send_files;
 use send_folder::send_folder;
 
+
+const HOST: &'static str = "http://192.168.2.107:53317";
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let file_args: Vec<String> = std::env::args().collect();
