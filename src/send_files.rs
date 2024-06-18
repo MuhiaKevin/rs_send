@@ -30,9 +30,6 @@ pub struct OpenFiles {
 
     #[serde(skip)]
     real_file_path: String,
-    
-    // #[serde(skip)]
-    // file_pointer: File,
 
     #[serde(rename = "sha256")]
     file_sha256: String,
@@ -84,13 +81,21 @@ impl<'a> PreUpload<'a> {
     }
 }
 
-pub async fn send_files(file_args: Vec<String>) -> anyhow::Result<()> {
-    let send_file_list = open_files_send(file_args).await;
+pub async fn send(file_args: Vec<String>) -> anyhow::Result<()> {
+    let my_path = Path::new(&file_args[1]);
+    let mut send_file_list: Vec<OpenFiles> = vec![];
+    let path_file_args = Path::new(&file_args[1]);
+    let root_dir: &str = path_file_args.file_name().unwrap().to_str().unwrap();
 
+    if my_path.is_dir() {
+        println!("This is a directory");
+        process_directory(path_file_args, root_dir, &mut send_file_list).unwrap();
+    } else {
+        println!("This is a file or files");
+        send_file_list = open_files_send(file_args).await;
+    }
 
-
-
-
+    println!("{send_file_list:#?}");
 
     let pre_upload = PreUpload::build(&send_file_list);
     let pre_upload_json = serde_json::to_string(&pre_upload)?;
@@ -126,7 +131,7 @@ async fn upload_files(
 
         let file_descriptor = File::open(file.real_file_path).await.unwrap();
         let stream = FramedRead::new(file_descriptor, BytesCodec::new());
-        
+
         // let stream = FramedRead::new(file.file_pointer, BytesCodec::new());
         let file_body = reqwest::Body::wrap_stream(stream);
 
@@ -178,49 +183,6 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
     open_files
 }
 
-
-
-
-pub async fn send(file_args: Vec<String>) -> anyhow::Result<()> {
-    let my_path = Path::new(&file_args[1]);
-    let mut send_file_list:Vec<OpenFiles> = vec![];
-    let path_file_args = Path::new(&file_args[1]);
-    let root_dir: &str = path_file_args.file_name().unwrap().to_str().unwrap();
-
-    if my_path.is_dir() {
-        println!("This is a directory");
-        process_directory(path_file_args, root_dir, &mut send_file_list).unwrap();
-    } else {
-        println!("This is a file or files");
-        send_file_list = open_files_send(file_args).await;
-    }
-
-    println!("{send_file_list:#?}");
-
-    let pre_upload = PreUpload::build(&send_file_list);
-    let pre_upload_json = serde_json::to_string(&pre_upload)?;
-
-    let pre_upload_url = format!("{HOST}/api/localsend/v2/prepare-upload");
-
-    let client = reqwest::Client::new();
-
-    let response = client
-        .post(pre_upload_url)
-        .header("Content-Type", "application/json")
-        .body(pre_upload_json)
-        .send()
-        .await?;
-
-    let response_body: Response = response.json().await?;
-    let _ = upload_files(response_body, send_file_list, &client).await;
-
-    Ok(())
-}
-
-
-
-
-
 // FIX: Problem getting all the files in a folder
 fn process_directory(
     path: &Path,
@@ -264,8 +226,6 @@ fn process_directory(
     Ok(())
 }
 
-
-
 async fn upload_folder(
     response_body: Response,
     open_files: Vec<OpenFiles>,
@@ -279,10 +239,8 @@ async fn upload_folder(
         .replace(last_section.to_str().unwrap(), "");
 
     for file in open_files {
-        // let real_path = format!("{removed}{}", file.file_name);
         let token = response_body.files.get(&file.id).unwrap();
-        // println!("{real_path}");
-        
+
         let url = format!(
             "{HOST}/api/localsend/v2/upload?sessionId={}&fileId={}&token={}",
             response_body.session_id, file.id, token
