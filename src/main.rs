@@ -7,7 +7,6 @@ use std::path::Path;
 use send_files::send_files;
 use send_folder::send_folder;
 
-
 const HOST: &'static str = "http://192.168.2.107:53317";
 
 #[tokio::main]

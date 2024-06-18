@@ -44,7 +44,7 @@ pub struct Settings {
 }
 
 impl<'a> PreUpload<'a> {
-    pub fn build(opened_files: &'a Vec<OpenFolder>) -> Self {
+    fn build(opened_files: &'a Vec<OpenFolder>) -> Self {
         let mut foo_bar: HashMap<String, &OpenFolder> = HashMap::new();
 
         for file in opened_files {
