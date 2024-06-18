@@ -28,7 +28,6 @@ pub struct OpenFiles {
     #[serde(rename = "fileType")]
     file_type: String,
 
-
     #[serde(skip)]
     real_file_path: String,
     
@@ -87,6 +86,12 @@ impl<'a> PreUpload<'a> {
 
 pub async fn send_files(file_args: Vec<String>) -> anyhow::Result<()> {
     let send_file_list = open_files_send(file_args).await;
+
+
+
+
+
+
     let pre_upload = PreUpload::build(&send_file_list);
     let pre_upload_json = serde_json::to_string(&pre_upload)?;
 
@@ -171,4 +176,135 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
     }
 
     open_files
+}
+
+
+
+
+pub async fn send(file_args: Vec<String>) -> anyhow::Result<()> {
+    let my_path = Path::new(&file_args[1]);
+    let mut send_file_list:Vec<OpenFiles> = vec![];
+    let path_file_args = Path::new(&file_args[1]);
+    let root_dir: &str = path_file_args.file_name().unwrap().to_str().unwrap();
+
+    if my_path.is_dir() {
+        println!("This is a directory");
+        process_directory(path_file_args, root_dir, &mut send_file_list).unwrap();
+    } else {
+        println!("This is a file or files");
+        send_file_list = open_files_send(file_args).await;
+    }
+
+    println!("{send_file_list:#?}");
+
+    let pre_upload = PreUpload::build(&send_file_list);
+    let pre_upload_json = serde_json::to_string(&pre_upload)?;
+
+    let pre_upload_url = format!("{HOST}/api/localsend/v2/prepare-upload");
+
+    let client = reqwest::Client::new();
+
+    let response = client
+        .post(pre_upload_url)
+        .header("Content-Type", "application/json")
+        .body(pre_upload_json)
+        .send()
+        .await?;
+
+    let response_body: Response = response.json().await?;
+    let _ = upload_files(response_body, send_file_list, &client).await;
+
+    Ok(())
+}
+
+
+
+
+
+// FIX: Problem getting all the files in a folder
+fn process_directory(
+    path: &Path,
+    root_dir: &str,
+    open_files: &mut Vec<OpenFiles>,
+) -> anyhow::Result<()> {
+    let mut count = 0;
+
+    for entry in std::fs::read_dir(path)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            process_directory(&path, root_dir, open_files)?;
+        } else {
+            if entry.path().exists() && entry.path().is_file() && !entry.path().is_symlink() {
+                //println!("{path:?}");
+                let id = format!("this_is_id_{}", count);
+                let file_size = path.metadata().unwrap().size();
+
+                let file_sha256 = String::from("Sha1asomsdashdjhjksad");
+                let file_path_str = path.to_str().unwrap();
+                let real_file_path = file_path_str.to_string();
+                let something = file_path_str.split_once(root_dir).unwrap().1;
+                let real_file_name = root_dir.to_string() + something;
+
+                open_files.push(OpenFiles {
+                    id,
+                    file_name: real_file_name.to_string(),
+                    real_file_path,
+                    file_size,
+                    file_type: "video/mp4".to_string(),
+                    preview: "*preview data*".to_string(),
+                    file_sha256,
+                });
+
+                count += 1;
+            }
+        }
+    }
+    Ok(())
+}
+
+
+
+async fn upload_folder(
+    response_body: Response,
+    open_files: Vec<OpenFiles>,
+    client: &Client,
+    absolute_path: String,
+) -> anyhow::Result<()> {
+    let file = Path::new(&absolute_path);
+    let last_section = file.file_name().unwrap();
+    let removed = absolute_path
+        .as_str()
+        .replace(last_section.to_str().unwrap(), "");
+
+    for file in open_files {
+        // let real_path = format!("{removed}{}", file.file_name);
+        let token = response_body.files.get(&file.id).unwrap();
+        // println!("{real_path}");
+        
+        let url = format!(
+            "{HOST}/api/localsend/v2/upload?sessionId={}&fileId={}&token={}",
+            response_body.session_id, file.id, token
+        );
+
+        let file_descriptor = File::open(file.real_file_path).await.unwrap();
+
+        let stream = FramedRead::new(file_descriptor, BytesCodec::new());
+        let file_body = reqwest::Body::wrap_stream(stream);
+
+        let part = multipart::Part::stream(file_body);
+
+        let form = reqwest::multipart::Form::new()
+            .text("resourceName", "filename.filetype")
+            .part("FileData", part);
+
+        let res = client.post(url).multipart(form).send().await?;
+        let status_code = res.status();
+        println!(
+            "Status Code: {status_code} Finsihed sending {} ",
+            file.file_name
+        );
+    }
+    Ok(())
 }
