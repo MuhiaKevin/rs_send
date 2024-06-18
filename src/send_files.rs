@@ -28,8 +28,12 @@ pub struct OpenFiles {
     #[serde(rename = "fileType")]
     file_type: String,
 
+
     #[serde(skip)]
-    file_pointer: File,
+    real_file_path: String,
+    
+    // #[serde(skip)]
+    // file_pointer: File,
 
     #[serde(rename = "sha256")]
     file_sha256: String,
@@ -115,7 +119,10 @@ async fn upload_files(
             response_body.session_id, file.id, token
         );
 
-        let stream = FramedRead::new(file.file_pointer, BytesCodec::new());
+        let file_descriptor = File::open(file.real_file_path).await.unwrap();
+        let stream = FramedRead::new(file_descriptor, BytesCodec::new());
+        
+        // let stream = FramedRead::new(file.file_pointer, BytesCodec::new());
         let file_body = reqwest::Body::wrap_stream(stream);
 
         let part = multipart::Part::stream(file_body);
@@ -145,7 +152,7 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
             let file_size = file_path.metadata().unwrap().size();
             // let file_sha256 = sha256::try_digest(file_path).unwrap(); FIX: This is is slow for now
             let file_sha256 = String::from("Sha1asomsdashdjhjksad");
-            let fp = File::open(file_path).await.unwrap();
+            // let fp = File::open(file_path).await.unwrap();
             let id = format!("this_is_id_{}", index);
             let real_file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
 
@@ -153,7 +160,8 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
                 id,
                 file_name: real_file_name,
                 file_size,
-                file_pointer: fp,
+                real_file_path: file_name.to_string(),
+                // file_pointer: fp,
                 file_sha256,
                 // file_type: "text".to_string(), FIX: Change this
                 file_type: "video/mp4".to_string(),
