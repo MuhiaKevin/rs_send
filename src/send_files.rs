@@ -199,7 +199,6 @@ fn process_directory(
             process_directory(&path, root_dir, open_files)?;
         } else {
             if entry.path().exists() && entry.path().is_file() && !entry.path().is_symlink() {
-                //println!("{path:?}");
                 let id = format!("this_is_id_{}", count);
                 let file_size = path.metadata().unwrap().size();
 
@@ -222,47 +221,6 @@ fn process_directory(
                 count += 1;
             }
         }
-    }
-    Ok(())
-}
-
-async fn upload_folder(
-    response_body: Response,
-    open_files: Vec<OpenFiles>,
-    client: &Client,
-    absolute_path: String,
-) -> anyhow::Result<()> {
-    let file = Path::new(&absolute_path);
-    let last_section = file.file_name().unwrap();
-    let removed = absolute_path
-        .as_str()
-        .replace(last_section.to_str().unwrap(), "");
-
-    for file in open_files {
-        let token = response_body.files.get(&file.id).unwrap();
-
-        let url = format!(
-            "{HOST}/api/localsend/v2/upload?sessionId={}&fileId={}&token={}",
-            response_body.session_id, file.id, token
-        );
-
-        let file_descriptor = File::open(file.real_file_path).await.unwrap();
-
-        let stream = FramedRead::new(file_descriptor, BytesCodec::new());
-        let file_body = reqwest::Body::wrap_stream(stream);
-
-        let part = multipart::Part::stream(file_body);
-
-        let form = reqwest::multipart::Form::new()
-            .text("resourceName", "filename.filetype")
-            .part("FileData", part);
-
-        let res = client.post(url).multipart(form).send().await?;
-        let status_code = res.status();
-        println!(
-            "Status Code: {status_code} Finsihed sending {} ",
-            file.file_name
-        );
     }
     Ok(())
 }

@@ -1,11 +1,7 @@
 // mod discovery;
 mod send_files;
-// mod send_folder;
-
-use std::path::Path;
 
 use send_files::send;
-// use send_folder::send_folder;
 
 const HOST: &'static str = "http://192.168.2.107:53317";
 
