@@ -18,22 +18,16 @@ pub struct Response {
 #[derive(Debug, Serialize)]
 pub struct OpenFiles {
     id: String,
-
     #[serde(rename = "fileName")]
     file_name: String,
-
     #[serde(rename = "size")]
     file_size: u64,
-
     #[serde(rename = "fileType")]
     file_type: String,
-
     #[serde(skip)]
     real_file_path: String,
-
     #[serde(rename = "sha256")]
     file_sha256: String,
-
     preview: String,
 }
 
@@ -88,14 +82,10 @@ pub async fn send(file_args: Vec<String>) -> anyhow::Result<()> {
     let root_dir: &str = path_file_args.file_name().unwrap().to_str().unwrap();
 
     if my_path.is_dir() {
-        println!("This is a directory");
         process_directory(path_file_args, root_dir, &mut send_file_list).unwrap();
     } else {
-        println!("This is a file or files");
         send_file_list = open_files_send(file_args).await;
     }
-
-    println!("{send_file_list:#?}");
 
     let pre_upload = PreUpload::build(&send_file_list);
     let pre_upload_json = serde_json::to_string(&pre_upload)?;
@@ -130,11 +120,9 @@ async fn upload_files(
         );
 
         let file_descriptor = File::open(file.real_file_path).await.unwrap();
+
         let stream = FramedRead::new(file_descriptor, BytesCodec::new());
-
-        // let stream = FramedRead::new(file.file_pointer, BytesCodec::new());
         let file_body = reqwest::Body::wrap_stream(stream);
-
         let part = multipart::Part::stream(file_body);
 
         let form = reqwest::multipart::Form::new()
@@ -162,7 +150,6 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
             let file_size = file_path.metadata().unwrap().size();
             // let file_sha256 = sha256::try_digest(file_path).unwrap(); FIX: This is is slow for now
             let file_sha256 = String::from("Sha1asomsdashdjhjksad");
-            // let fp = File::open(file_path).await.unwrap();
             let id = format!("this_is_id_{}", index);
             let real_file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
 
@@ -171,9 +158,7 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
                 file_name: real_file_name,
                 file_size,
                 real_file_path: file_name.to_string(),
-                // file_pointer: fp,
                 file_sha256,
-                // file_type: "text".to_string(), FIX: Change this
                 file_type: "video/mp4".to_string(),
                 preview: "*preview data*".to_string(),
             })

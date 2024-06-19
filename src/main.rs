@@ -10,11 +10,10 @@ async fn main() -> anyhow::Result<()> {
     let file_args: Vec<String> = std::env::args().collect();
 
     if file_args.len() < 2 {
-        eprintln!("Please Enter some files");
+        eprintln!("Please Enter some files or folder");
         std::process::exit(1);
     }
 
     send(file_args).await?;
-
     Ok(())
 }
