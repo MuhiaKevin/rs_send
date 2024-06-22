@@ -1,5 +1,6 @@
 // mod discovery;
 mod send_files;
+mod receive_files;
 
 use send_files::send;
 
@@ -7,6 +8,8 @@ const HOST: &'static str = "http://192.168.2.107:53317";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    receive_files::start_server().await;
+
     let file_args: Vec<String> = std::env::args().collect();
 
     if file_args.len() < 2 {
