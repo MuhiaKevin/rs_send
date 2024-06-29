@@ -12,6 +12,8 @@ sha256 = "1.5.0"
 tokio-util = "0.7.11"
 anyhow = "1.0.86"
 axum = "0.7.5"
+tower-http = { version = "0.5.2", features = ["cors"] }
+uuid = { version = "1.9.1", features = ["v4", "serde"] }
 
 # [profile.release]
 # lto = true

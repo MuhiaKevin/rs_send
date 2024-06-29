@@ -14,4 +14,5 @@
 - https://medium.com/@itsuki.enjoy/post-file-using-multipart-form-data-in-rust-5171ae57aeed
 - https://medium.com/@itsuki.enjoy/detail-guide-to-serialization-and-deserialization-with-serde-in-rust-4fa70a6a8c4b
 - https://www.reddit.com/r/rust/comments/18ogwtl/which_web_framework_do_you_use_in_rust/
-
+- https://codevoweb.com/create-a-simple-api-in-rust-using-the-axum-framework/
+- https://blog.logrocket.com/using-rust-axum-build-jwt-authentication-api/

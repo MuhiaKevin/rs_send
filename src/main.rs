@@ -1,6 +1,6 @@
 // mod discovery;
-mod send_files;
 mod receive_files;
+mod send_files;
 
 use send_files::send;
 

@@ -8,47 +8,47 @@ use tokio_util::codec::{BytesCodec, FramedRead};
 
 use crate::HOST;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Response {
     #[serde(rename = "sessionId")]
     pub session_id: String,
     pub files: HashMap<String, String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct OpenFiles {
-    id: String,
+    pub id: String,
     #[serde(rename = "fileName")]
-    file_name: String,
+    pub file_name: String,
     #[serde(rename = "size")]
-    file_size: u64,
+    pub file_size: u64,
     #[serde(rename = "fileType")]
-    file_type: String,
+    pub file_type: String,
     #[serde(skip)]
-    real_file_path: String,
+    pub real_file_path: String,
     #[serde(rename = "sha256")]
-    file_sha256: String,
-    preview: String,
+    pub file_sha256: String,
+    pub preview: String,
 }
 
 #[derive(Debug, Serialize)]
-struct PreUpload<'a> {
-    info: Settings,
-    files: HashMap<String, &'a OpenFiles>,
+pub struct PreUpload<'a> {
+    pub info: Settings,
+    pub files: HashMap<String, &'a OpenFiles>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Settings {
-    alias: String,
-    version: String,
+pub struct Settings {
+    pub alias: String,
+    pub version: String,
     #[serde(rename = "deviceModel")]
-    device_model: String,
+    pub device_model: String,
     #[serde(rename = "deviceType")]
-    device_type: String,
-    fingerprint: String,
-    port: u64,
-    protocol: String,
-    download: bool,
+    pub device_type: String,
+    pub fingerprint: String,
+    pub port: u64,
+    pub protocol: String,
+    pub download: bool,
 }
 
 impl<'a> PreUpload<'a> {
