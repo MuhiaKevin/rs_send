@@ -41,11 +41,11 @@ struct QueryOptions {
     token: String,
 }
 
-type DB = Arc<Mutex<Vec<ReceivedFiles>>>;
+type DB = Arc<Mutex<HashMap<String, ReceivedFiles>>>;
 
 pub async fn start_server() {
     let server_address = "192.168.2.100:53317".to_string();
-    let db = Arc::new(Mutex::new(Vec::new()));
+    let db = Arc::new(Mutex::new(HashMap::new()));
 
     let cors = CorsLayer::new()
         .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
@@ -92,13 +92,12 @@ async fn pre_upload(
         files.insert(file.id.clone(), file_token.clone());
 
         // add files to a list
-        // FIX: duplicate files
-        send_list.push(ReceivedFiles {
+        send_list.insert(file_token.clone(), ReceivedFiles {
             sessionId: session_id.clone(),
             file_id: file.id.clone(),
             file_name: file.file_name.clone(),
             file_token,
-        })
+        });
     }
 
     let json_response = serde_json::json!(Response { session_id, files });
@@ -120,18 +119,10 @@ async fn upload_handler(
         });
         return Ok((StatusCode::FORBIDDEN, Json(json_response)));
     }
-    // if file_token does not match server file_token send status code 403 with message "Invalid token or IP address"
-    // Any internal problem then send status code 500 with message "Unknown error by receiver"
-    // if everything good get the name of the file from the database given the file token
-    // write file to disk and send status code 200 if everything goes well and if there are
-    // internal problems such as lack of permission or not enough space in the disk then send
-    // the status code 500
 
-    // get session_id, file_id and token from query params
-    // if any of the above is ommited then send error message  send status code 400 with message "Missing parameters"
     let Query(opts) = opts;
 
-    if opts.sessionId != vec[0].sessionId {
+    if opts.sessionId != vec.get(&opts.token).unwrap().sessionId {
         let json_response = serde_json::json!({
             "message": "Invalid token or IP address",
             "message2" : "Invalid Session id",
@@ -139,41 +130,28 @@ async fn upload_handler(
         return Ok((StatusCode::FORBIDDEN, Json(json_response)));
     }
 
-    // FIX: Use Hashmap instead of this
-    for received_file in vec.iter() {
-        // println!("quer file_id: {}  database file_id: {}", opts.fileId, received_file.file_id);
-        if opts.fileId == received_file.file_id {
-            // println!("query token: {}  database token: {}", opts.token, received_file.file_token);
-            if opts.token == received_file.file_token {
-                println!("Downloading file: {}", received_file.file_name);
-                // NOTE: DOWNLOADING HERE and writing to disk
-                while let Some(field) = multipart.next_field().await.unwrap() {
-                    let data = field.bytes().await.unwrap();
-                    println!("file chunk is {} bytes", data.len());
 
+    if let Some(received_file) = vec.get(&opts.token) {
+        println!("Downloading file: {}", received_file.file_name);
+        while let Some(field) = multipart.next_field().await.unwrap() {
+            let data = field.bytes().await.unwrap();
+            println!("file chunk is {} bytes", data.len());
+            let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
+            let mut file = File::create(file_path).unwrap();
 
+            task::spawn_blocking(move || {
+                file.write_all(&data).expect("Failed to write data");
+            }) .await.unwrap();
 
-                    let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
-                    // let mut file = File::create(file_path).expect("Failed to create file");
-                    let mut file = File::create(file_path).unwrap();
-
-                    task::spawn_blocking(move || {
-                        file.write_all(&data).expect("Failed to write data");
-                    }) .await .unwrap();
-
-                }
-            } else {
-                let json_response = serde_json::json!({
-                    "message": "Invalid token or IP address",
-                    "message2" : "Wrong file token",
-                });
-                return Ok((StatusCode::FORBIDDEN, Json(json_response)));
-            }
         }
+    } else {
+        let json_response = serde_json::json!({
+            "message": "Invalid token or IP address",
+            "message2" : "Wrong file token",
+        });
+        return Ok((StatusCode::FORBIDDEN, Json(json_response)));
     }
-
-    // if session_id does match the server session_id then send status code 403 with message "Invalid token or IP address"
-
+  
     let json_response = serde_json::json!({
         "status": "success",
         "message":  "Received upload request"
@@ -185,7 +163,6 @@ async fn upload_handler(
 async fn health_checker_handler(State(db): State<DB>) -> impl IntoResponse {
     const MESSAGE: &str = "Downloading file...";
 
-    // list of files with their name, id and token
     let send_list = db.lock().await;
     println!("{:#?}", send_list);
 
