@@ -4,7 +4,7 @@
 
 - [x] Send file/files
 - [x] Send folder
-- [ ] Receive file/files
+- [x] Receive file/files
 - [ ] Receive folder
 
 
