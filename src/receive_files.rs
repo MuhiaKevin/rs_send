@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use axum::{
-    extract::{DefaultBodyLimit, Json, Multipart, Query, State},
+    extract::{DefaultBodyLimit, Json, Query, State},
     body::Bytes,
     http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     http::StatusCode,
@@ -121,12 +121,9 @@ async fn pre_upload(
     Ok((StatusCode::OK, Json(json_response)))
 }
 
-// FIX: Error when receiving a file from a client: "Invalid `boundary` for `multipart/form-data` request"
-// Rejection type used if the boundary in a multipart/form-data is missing or invalid.
 async fn upload_handler(
     opts: Query<QueryOptions>,
     State(db): State<DB>,
-    // mut multipart: Multipart,
     bytes: Bytes,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let received_files_database = db.lock().await;
@@ -151,19 +148,6 @@ async fn upload_handler(
 
     if let Some(received_file) = received_files_database.get(&opts.token) {
         println!("Downloading file: {}", received_file.file_name);
-        // while let Some(field) = multipart.next_field().await.unwrap() {
-        //     let data = field.bytes().await.unwrap();
-        //     // println!("file chunk is {} bytes", data.len());
-        //     let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
-        //     let mut file = File::create(file_path).unwrap();
-        //
-        //     task::spawn_blocking(move || {
-        //         file.write_all(&data).expect("Failed to write data");
-        //     })
-        //     .await
-        //     .unwrap();
-        // }
-
         let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
         let mut file = File::create(file_path).unwrap();
 
