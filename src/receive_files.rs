@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use axum::{
     extract::{DefaultBodyLimit, Json, Multipart, Query, State},
+    body::Bytes,
     http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     http::StatusCode,
     http::{HeaderValue, Method},
@@ -125,7 +126,8 @@ async fn pre_upload(
 async fn upload_handler(
     opts: Query<QueryOptions>,
     State(db): State<DB>,
-    mut multipart: Multipart,
+    // mut multipart: Multipart,
+    bytes: Bytes,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let received_files_database = db.lock().await;
 
@@ -149,18 +151,28 @@ async fn upload_handler(
 
     if let Some(received_file) = received_files_database.get(&opts.token) {
         println!("Downloading file: {}", received_file.file_name);
-        while let Some(field) = multipart.next_field().await.unwrap() {
-            let data = field.bytes().await.unwrap();
-            // println!("file chunk is {} bytes", data.len());
-            let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
-            let mut file = File::create(file_path).unwrap();
+        // while let Some(field) = multipart.next_field().await.unwrap() {
+        //     let data = field.bytes().await.unwrap();
+        //     // println!("file chunk is {} bytes", data.len());
+        //     let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
+        //     let mut file = File::create(file_path).unwrap();
+        //
+        //     task::spawn_blocking(move || {
+        //         file.write_all(&data).expect("Failed to write data");
+        //     })
+        //     .await
+        //     .unwrap();
+        // }
 
-            task::spawn_blocking(move || {
-                file.write_all(&data).expect("Failed to write data");
-            })
+        let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
+        let mut file = File::create(file_path).unwrap();
+
+        task::spawn_blocking(move || {
+            file.write_all(&bytes).expect("Failed to write data");
+        })
             .await
             .unwrap();
-        }
+
     } else {
         let json_response = serde_json::json!({
             "message": "Invalid token or IP address",
