@@ -56,15 +56,18 @@ pub async fn start_server() {
     let listener = TcpListener::bind(server_address).await.unwrap();
 
     let app = Router::new()
+        //FIX: add POST /api/localsend/v2/register to receive info from the client
+        // remove sha256
         .route("/health", get(health_checker_handler))
         .route("/api/localsend/v2/upload", post(upload_handler))
         .route("/api/localsend/v2/prepare-upload", post(pre_upload))
         .layer(cors)
-        // NOTE: Maybe remove this later
+        // disable limit of files
         .layer(DefaultBodyLimit::disable())
-        .layer(RequestBodyLimitLayer::new(
-            250 * 1024 * 1024, /* 250mb */
-        ))
+        // SET UP THE MAXIMUM SIZE OF FILE ACCEPTED
+        // .layer(RequestBodyLimitLayer::new(
+        //     250 * 1024 * 1024, /* 250mb */
+        // ))
         .with_state(db);
 
     println!("🚀 Server started successfully on port :53317");
@@ -77,6 +80,7 @@ async fn pre_upload(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     // hashmap for file_id with corresponding file_token
     let mut files: HashMap<String, String> = HashMap::new();
+    println!("{:#?}", body);
 
     // list of files with their name, id and token
     let mut send_list = db.lock().await;

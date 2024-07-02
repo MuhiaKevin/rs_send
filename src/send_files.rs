@@ -26,9 +26,9 @@ pub struct OpenFiles {
     pub file_type: String,
     #[serde(skip)]
     pub real_file_path: String,
-    #[serde(rename = "sha256")]
-    pub file_sha256: String,
-    pub preview: String,
+    // #[serde(rename = "sha256")]
+    // pub file_sha256: String,
+    // pub preview: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -149,7 +149,7 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
         if file_path.exists() {
             let file_size = file_path.metadata().unwrap().size();
             // let file_sha256 = sha256::try_digest(file_path).unwrap(); FIX: This is is slow for now
-            let file_sha256 = String::from("Sha1asomsdashdjhjksad");
+            // let file_sha256 = String::from("Sha1asomsdashdjhjksad");
             let id = format!("this_is_id_{}", index);
             let real_file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
 
@@ -157,10 +157,10 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
                 id,
                 file_name: real_file_name,
                 file_size,
-                real_file_path: file_name.to_string(),
-                file_sha256,
                 file_type: "video/mp4".to_string(),
-                preview: "*preview data*".to_string(),
+                real_file_path: file_name.to_string(),
+                // file_sha256,
+                // preview: "*preview data*".to_string(),
             })
         }
     }
@@ -199,8 +199,8 @@ fn process_directory(
                     real_file_path,
                     file_size,
                     file_type: "video/mp4".to_string(),
-                    preview: "*preview data*".to_string(),
-                    file_sha256,
+                    // preview: "*preview data*".to_string(),
+                    // file_sha256,
                 });
 
                 count += 1;

@@ -1,15 +1,14 @@
-use std::net::{SocketAddr, UdpSocket};
-use std::time::Duration;
-use std::str::from_utf8;
-use serde_json::{Result, json};
+use serde_json::{json, Result};
 use std::net::Ipv4Addr;
+use std::net::{SocketAddr, UdpSocket};
+use std::str::from_utf8;
+use std::time::Duration;
 
 pub fn udp_listen() {
     // let address = "0.0.0.0:53317";
     // let address = "224.0.0.167:53317";
     let addr1 = SocketAddr::from(([0, 0, 0, 0], 53317));
-    let udp_socket = UdpSocket::bind(addr1)
-        .expect("Failed to bind socket to port 53317");
+    let udp_socket = UdpSocket::bind(addr1).expect("Failed to bind socket to port 53317");
 
     println!("Waiting for Localsend clients to connect...");
 
@@ -31,17 +30,17 @@ pub fn udp_listen() {
 }
 
 fn untyped_example() -> Result<Vec<u8>> {
-        let john = json!({
-          "alias": "Chifu Wa kizunu",
-          "version": "2.0",
-          "deviceModel": "Chifus Phone",
-          "deviceType": "desktop",
-          "fingerprint": "random string",
-          "port": 53317,
-          "protocol": "https",
-          "download": true,
-          "announce": true
-        });
+    let john = json!({
+      "alias": "Chifu Wa kizunu",
+      "version": "2.0",
+      "deviceModel": "Chifus Phone",
+      "deviceType": "headless",
+      "fingerprint": "random string",
+      "port": 53317,
+      "protocol": "http",
+      "download": true,
+      "announce": true
+    });
 
     let str_byteer = john.to_string();
 
@@ -49,32 +48,32 @@ fn untyped_example() -> Result<Vec<u8>> {
     Ok(in_bytes)
 }
 
-
-fn send_discover_message() -> Vec<u8>{
+fn send_discover_message() -> Vec<u8> {
     untyped_example().unwrap()
 }
-
 
 pub fn get_discovered_by_clients() {
     let msg = send_discover_message();
 
     let socket = UdpSocket::bind("0.0.0.0:0").expect("couldn't bind to address");
-    socket.set_broadcast(true).expect("set_broadcast call failed");
+    socket
+        .set_broadcast(true)
+        .expect("set_broadcast call failed");
 
     loop {
         // println!("Sending broad cast message");
         // println!("{:?}", msg);
         // socket.send_to(&msg, broadcast_socket_addr).expect("couldn't send data");
         // socket.send_to(&msg, "255.255.255.255:53317").expect("couldn't send data");
-        socket.send_to(&msg, "255.255.255.255:53317").expect("couldn't send data");
-        std::thread::sleep(Duration::from_secs(2))
+        socket
+            .send_to(&msg, "255.255.255.255:53317")
+            .expect("couldn't send data");
+        std::thread::sleep(Duration::from_secs(6))
     }
 }
 
-
-
 pub fn another_send() -> std::io::Result<()> {
-    std::thread::spawn(||  get_discovered_by_clients());
+    std::thread::spawn(|| get_discovered_by_clients());
 
     // Create a UdpSocket and bind it to the desired port
     let socket = UdpSocket::bind("0.0.0.0:53317")?;
