@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use axum::{
-    extract::{DefaultBodyLimit, Json, Query, State},
     body::Bytes,
+    extract::{DefaultBodyLimit, Json, Query, State},
     http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     http::StatusCode,
     http::{HeaderValue, Method},
@@ -154,9 +154,8 @@ async fn upload_handler(
         task::spawn_blocking(move || {
             file.write_all(&bytes).expect("Failed to write data");
         })
-            .await
-            .unwrap();
-
+        .await
+        .unwrap();
     } else {
         let json_response = serde_json::json!({
             "message": "Invalid token or IP address",
