@@ -6,6 +6,8 @@
 - [x] Send folder
 - [x] Receive file/files
 - [ ] Receive folder
+- [ ] Work on UI(Ratatui, clap etc.)
+- [ ] Improve error handling
 
 
 ### Useful Resources

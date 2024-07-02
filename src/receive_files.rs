@@ -16,7 +16,6 @@ use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tokio::task;
 use tower_http::cors::CorsLayer;
-use tower_http::limit::RequestBodyLimitLayer;
 use uuid::Uuid;
 
 use crate::send_files::{OpenFiles, Response, Settings};
@@ -49,7 +48,7 @@ pub async fn start_server() {
     let db = Arc::new(Mutex::new(HashMap::new()));
 
     let cors = CorsLayer::new()
-        // .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
         .allow_methods([Method::GET, Method::POST])
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
@@ -76,8 +75,7 @@ pub async fn start_server() {
 async fn register(
     Json(body): Json<Settings>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    println!("client sent this {body:#?}");
-
+    // println!("client sent this {body:#?}");
     let json_response = serde_json::json!({
         "message": "Client info received",
     });

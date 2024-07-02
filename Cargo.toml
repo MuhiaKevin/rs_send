@@ -15,10 +15,10 @@ axum =  "0.7.5"
 tower-http = { version = "0.5.2", features = ["cors", "limit"] }
 uuid = { version = "1.9.1", features = ["v4", "serde"] }
 
-# [profile.release]
-# lto = true
-# codegen-units = 1
-# panic = 'abort'
-# strip = true
-# opt-level = 'z' # only have smaller size after strip
-# rpath = true
+[profile.release]
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
+opt-level = 'z' # only have smaller size after strip
+rpath = true

@@ -187,7 +187,6 @@ fn process_directory(
                 let id = format!("this_is_id_{}", count);
                 let file_size = path.metadata().unwrap().size();
 
-                let file_sha256 = String::from("Sha1asomsdashdjhjksad");
                 let file_path_str = path.to_str().unwrap();
                 let real_file_path = file_path_str.to_string();
                 let something = file_path_str.split_once(root_dir).unwrap().1;
