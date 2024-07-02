@@ -10,13 +10,13 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::{fs::File, io::Write};
 use tokio::net::TcpListener;
-use tokio::task;
 use tokio::sync::Mutex;
+use tokio::task;
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use uuid::Uuid;
-use std::{fs::File, io::Write};
 
 use crate::send_files::{OpenFiles, Response, Settings};
 
@@ -92,12 +92,15 @@ async fn pre_upload(
         files.insert(file.id.clone(), file_token.clone());
 
         // add files to a list
-        send_list.insert(file_token.clone(), ReceivedFiles {
-            sessionId: session_id.clone(),
-            file_id: file.id.clone(),
-            file_name: file.file_name.clone(),
-            file_token,
-        });
+        send_list.insert(
+            file_token.clone(),
+            ReceivedFiles {
+                sessionId: session_id.clone(),
+                file_id: file.id.clone(),
+                file_name: file.file_name.clone(),
+                file_token,
+            },
+        );
     }
 
     let json_response = serde_json::json!(Response { session_id, files });
@@ -110,9 +113,9 @@ async fn upload_handler(
     State(db): State<DB>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let vec = db.lock().await;
+    let received_files_database = db.lock().await;
 
-    if vec.len() == 0 {
+    if received_files_database.len() == 0 {
         let json_response = serde_json::json!({
             "message": "Invalid token or IP address",
             "message2" : "Send Preupload first",
@@ -122,7 +125,7 @@ async fn upload_handler(
 
     let Query(opts) = opts;
 
-    if opts.sessionId != vec.get(&opts.token).unwrap().sessionId {
+    if opts.sessionId != received_files_database.get(&opts.token).unwrap().sessionId {
         let json_response = serde_json::json!({
             "message": "Invalid token or IP address",
             "message2" : "Invalid Session id",
@@ -130,19 +133,19 @@ async fn upload_handler(
         return Ok((StatusCode::FORBIDDEN, Json(json_response)));
     }
 
-
-    if let Some(received_file) = vec.get(&opts.token) {
+    if let Some(received_file) = received_files_database.get(&opts.token) {
         println!("Downloading file: {}", received_file.file_name);
         while let Some(field) = multipart.next_field().await.unwrap() {
             let data = field.bytes().await.unwrap();
-            println!("file chunk is {} bytes", data.len());
+            // println!("file chunk is {} bytes", data.len());
             let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
             let mut file = File::create(file_path).unwrap();
 
             task::spawn_blocking(move || {
                 file.write_all(&data).expect("Failed to write data");
-            }) .await.unwrap();
-
+            })
+            .await
+            .unwrap();
         }
     } else {
         let json_response = serde_json::json!({
@@ -151,7 +154,7 @@ async fn upload_handler(
         });
         return Ok((StatusCode::FORBIDDEN, Json(json_response)));
     }
-  
+
     let json_response = serde_json::json!({
         "status": "success",
         "message":  "Received upload request"
