@@ -11,10 +11,12 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tokio::task;
 use tokio::sync::Mutex;
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use uuid::Uuid;
+use std::{fs::File, io::Write};
 
 use crate::send_files::{OpenFiles, Response, Settings};
 
@@ -58,6 +60,7 @@ pub async fn start_server() {
         .route("/api/localsend/v2/upload", post(upload_handler))
         .route("/api/localsend/v2/prepare-upload", post(pre_upload))
         .layer(cors)
+        // NOTE: Maybe remove this later
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(
             250 * 1024 * 1024, /* 250mb */
@@ -108,7 +111,7 @@ async fn upload_handler(
     State(db): State<DB>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    let mut vec = db.lock().await;
+    let vec = db.lock().await;
 
     if vec.len() == 0 {
         let json_response = serde_json::json!({
@@ -146,8 +149,18 @@ async fn upload_handler(
                 // NOTE: DOWNLOADING HERE and writing to disk
                 while let Some(field) = multipart.next_field().await.unwrap() {
                     let data = field.bytes().await.unwrap();
-
                     println!("file chunk is {} bytes", data.len());
+
+
+
+                    let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
+                    // let mut file = File::create(file_path).expect("Failed to create file");
+                    let mut file = File::create(file_path).unwrap();
+
+                    task::spawn_blocking(move || {
+                        file.write_all(&data).expect("Failed to write data");
+                    }) .await .unwrap();
+
                 }
             } else {
                 let json_response = serde_json::json!({
