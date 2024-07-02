@@ -48,19 +48,17 @@ pub async fn start_server() {
     let db = Arc::new(Mutex::new(HashMap::new()));
 
     let cors = CorsLayer::new()
-        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+        // .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
         .allow_methods([Method::GET, Method::POST])
-        .allow_credentials(true)
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
     let listener = TcpListener::bind(server_address).await.unwrap();
 
     let app = Router::new()
-        //FIX: add POST /api/localsend/v2/register to receive info from the client
-        // remove sha256
         .route("/health", get(health_checker_handler))
-        .route("/api/localsend/v2/upload", post(upload_handler))
+        .route("/api/localsend/v2/register", post(register))
         .route("/api/localsend/v2/prepare-upload", post(pre_upload))
+        .route("/api/localsend/v2/upload", post(upload_handler))
         .layer(cors)
         // disable limit of files
         .layer(DefaultBodyLimit::disable())
@@ -74,13 +72,23 @@ pub async fn start_server() {
     axum::serve(listener, app).await.unwrap();
 }
 
+async fn register(
+    Json(body): Json<Settings>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    println!("client sent this {body:#?}");
+
+    let json_response = serde_json::json!({
+        "message": "Client info received",
+    });
+    Ok((StatusCode::OK, Json(json_response)))
+}
+
 async fn pre_upload(
     State(db): State<DB>,
     Json(body): Json<PreUpload>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     // hashmap for file_id with corresponding file_token
     let mut files: HashMap<String, String> = HashMap::new();
-    println!("{:#?}", body);
 
     // list of files with their name, id and token
     let mut send_list = db.lock().await;
@@ -112,6 +120,8 @@ async fn pre_upload(
     Ok((StatusCode::OK, Json(json_response)))
 }
 
+// FIX: Error when receiving a file from a client: "Invalid `boundary` for `multipart/form-data` request"
+// Rejection type used if the boundary in a multipart/form-data is missing or invalid.
 async fn upload_handler(
     opts: Query<QueryOptions>,
     State(db): State<DB>,
