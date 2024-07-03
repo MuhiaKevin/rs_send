@@ -10,8 +10,9 @@ use axum::{
     routing::{get, post, Router},
 };
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::sync::Arc;
-use std::{fs::File, io::Write};
+use std::{fs, fs::File, io::Write};
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tokio::task;
@@ -146,20 +147,45 @@ async fn upload_handler(
 
     if let Some(received_file) = received_files_database.get(&opts.token) {
         println!("Downloading file: {}", received_file.file_name);
-        let file_path = format!("/tmp/{}", received_file.file_name);
-        let mut file = File::create(file_path).unwrap();
+        // check if file is has parent folder
+        // let file_path = format!("/tmp/{}", received_file.file_name);
+        if let Some(parent) = Path::new(&received_file.file_name).parent() {
+            // println!("File :{} -> Parent: {:?}", received_file.file_name, parent);
+            let parent_str = parent.to_str().unwrap();
+            let file_path = format!("/tmp/uploads/{}", received_file.file_name);
 
-        task::spawn_blocking(move || {
-            file.write_all(&bytes).expect("Failed to write data");
-        })
-        .await
-        .unwrap();
-    } else {
-        let json_response = serde_json::json!({
-            "message": "Invalid token or IP address",
-            "message2" : "Wrong file token",
-        });
-        return Ok((StatusCode::FORBIDDEN, Json(json_response)));
+            if parent_str != "" {
+                let parent_path = format!("/tmp/uploads/{}", parent_str);
+                // println!("Parent {} -> File {}",file_path, parent_path);
+
+                fs::create_dir_all(parent_path).unwrap();
+
+                let mut file = File::create(file_path).unwrap();
+                // file.write_all(&bytes).expect("Failed to write data");
+                // file.flush().unwrap();
+
+                task::spawn_blocking(move || {
+                    file.write_all(&bytes).expect("Failed to write data");
+                })
+                .await
+                .unwrap();
+            } else {
+                // println!("This is just a file");
+                let mut file = File::create(file_path).unwrap();
+
+                task::spawn_blocking(move || {
+                    file.write_all(&bytes).expect("Failed to write data");
+                })
+                .await
+                .unwrap();
+            }
+        } else {
+            let json_response = serde_json::json!({
+                "message": "Invalid token or IP address",
+                "message2" : "Wrong file token",
+            });
+            return Ok((StatusCode::FORBIDDEN, Json(json_response)));
+        }
     }
 
     let json_response = serde_json::json!({

@@ -121,6 +121,7 @@ async fn upload_files(
 
         let file_descriptor = File::open(file.real_file_path).await.unwrap();
 
+        // FIX: remove sending using multipart
         let stream = FramedRead::new(file_descriptor, BytesCodec::new());
         let file_body = reqwest::Body::wrap_stream(stream);
         let part = multipart::Part::stream(file_body);
