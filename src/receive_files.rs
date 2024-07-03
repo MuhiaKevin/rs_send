@@ -146,7 +146,7 @@ async fn upload_handler(
 
     if let Some(received_file) = received_files_database.get(&opts.token) {
         println!("Downloading file: {}", received_file.file_name);
-        let file_path = format!("/tmp/rs_send_uploads/{}", received_file.file_name);
+        let file_path = format!("/tmp/{}", received_file.file_name);
         let mut file = File::create(file_path).unwrap();
 
         task::spawn_blocking(move || {
