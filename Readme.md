@@ -4,7 +4,7 @@
 - [x] Send file/files
 - [x] Send folder
 - [x] Receive file/files
-- [ ] Receive folder
+- [x] Receive folder
 - [ ] Work on UI(Ratatui, clap etc.)
 - [ ] Improve error handling
 
