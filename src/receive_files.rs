@@ -45,7 +45,7 @@ struct QueryOptions {
 type DB = Arc<Mutex<HashMap<String, ReceivedFiles>>>;
 
 pub async fn start_server() {
-    let server_address = "192.168.2.100:53317".to_string();
+    let server_address = "0.0.0.0:53317".to_string(); // bind to all interfaces
     let db = Arc::new(Mutex::new(HashMap::new()));
 
     let cors = CorsLayer::new()
