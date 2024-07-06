@@ -3,8 +3,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
+// use std::io::BufReader;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
+
+use tokio::io::AsyncReadExt;
+use tokio::io::BufReader;
+use tokio_util::io::ReaderStream;
 
 use crate::HOST;
 
@@ -118,21 +123,41 @@ async fn upload_files(
 
         let file_descriptor = File::open(file.real_file_path).await.unwrap();
 
+        let reader = BufReader::new(file_descriptor);
+        let file_len = reader.get_ref().metadata().await.unwrap().len();
+
         // FIX: remove sending using multipart
-        let stream = FramedRead::new(file_descriptor, BytesCodec::new());
-        let file_body = reqwest::Body::wrap_stream(stream);
-        let part = multipart::Part::stream(file_body);
+        // let stream = FramedRead::new(file_descriptor, BytesCodec::new());
+        // let file_body = reqwest::Body::wrap_stream(stream);
+        // let part = multipart::Part::stream(file_body);
+        //
+        // let form = reqwest::multipart::Form::new()
+        //     .text("resourceName", "filename.filetype")
+        //     .part("FileData", part);
+        //
+        // let res = client.post(url).multipart(form).send().await?;
+        // let status_code = res.status();
+        // println!(
+        //     "Status Code: {status_code} Finsihed sending {} ",
+        //     file.file_name
+        // );
 
-        let form = reqwest::multipart::Form::new()
-            .text("resourceName", "filename.filetype")
-            .part("FileData", part);
+        let stream = ReaderStream::new(reader);
+        let body = reqwest::Body::wrap_stream(stream);
 
-        let res = client.post(url).multipart(form).send().await?;
-        let status_code = res.status();
-        println!(
-            "Status Code: {status_code} Finsihed sending {} ",
-            file.file_name
-        );
+        let client = Client::new();
+        let response = client
+            .post(url)
+            .header("Content-Length", file_len)
+            .body(body)
+            .send()
+        .await?;
+
+        if response.status().is_success() {
+            println!("File uploaded successfully!");
+        } else {
+            println!("File upload failed with status: {}", response.status());
+        }
     }
 
     Ok(())
