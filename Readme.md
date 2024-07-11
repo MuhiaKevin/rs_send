@@ -14,3 +14,4 @@
 
 ### Resources
 - https://github.com/localsend/protocol
+- https://www.shuttle.rs/blog/2023/12/08/clap-rust

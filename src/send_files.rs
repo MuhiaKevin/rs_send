@@ -121,27 +121,10 @@ async fn upload_files(
             response_body.session_id, file.id, token
         );
 
-        let file_descriptor = File::open(file.real_file_path).await.unwrap();
+        let file_descriptor = File::open(&file.real_file_path).await.unwrap();
 
         let reader = BufReader::new(file_descriptor);
         let file_len = reader.get_ref().metadata().await.unwrap().len();
-
-        // FIX: remove sending using multipart
-        // let stream = FramedRead::new(file_descriptor, BytesCodec::new());
-        // let file_body = reqwest::Body::wrap_stream(stream);
-        // let part = multipart::Part::stream(file_body);
-        //
-        // let form = reqwest::multipart::Form::new()
-        //     .text("resourceName", "filename.filetype")
-        //     .part("FileData", part);
-        //
-        // let res = client.post(url).multipart(form).send().await?;
-        // let status_code = res.status();
-        // println!(
-        //     "Status Code: {status_code} Finsihed sending {} ",
-        //     file.file_name
-        // );
-
         let stream = ReaderStream::new(reader);
         let body = reqwest::Body::wrap_stream(stream);
 
@@ -154,9 +137,9 @@ async fn upload_files(
         .await?;
 
         if response.status().is_success() {
-            println!("File uploaded successfully!");
+            println!("File: {} sent successfully!", file.file_name);
         } else {
-            println!("File upload failed with status: {}", response.status());
+            println!("Failed to send file: {} with status {}", file.file_name, response.status());
         }
     }
 
