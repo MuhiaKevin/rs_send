@@ -14,6 +14,7 @@ anyhow = "1.0.86"
 axum =  "0.7.5"
 tower-http = { version = "0.5.2", features = ["cors", "limit"] }
 uuid = { version = "1.9.1", features = ["v4", "serde"] }
+clap = { version = "4.5.9", features = ["derive"] }
 
 [profile.release]
 lto = true

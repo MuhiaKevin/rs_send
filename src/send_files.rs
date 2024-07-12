@@ -78,9 +78,9 @@ impl<'a> PreUpload<'a> {
 }
 
 pub async fn send(file_args: Vec<String>) -> anyhow::Result<()> {
-    let my_path = Path::new(&file_args[1]);
+    let my_path = Path::new(&file_args[0]);
     let mut send_file_list: Vec<OpenFiles> = vec![];
-    let path_file_args = Path::new(&file_args[1]);
+    let path_file_args = Path::new(&file_args[0]);
     let root_dir: &str = path_file_args.file_name().unwrap().to_str().unwrap();
 
     if my_path.is_dir() {
