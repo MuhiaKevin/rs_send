@@ -69,7 +69,7 @@ pub async fn start_server() {
         // ))
         .with_state(db);
 
-    println!("🚀 Server started successfully on port :53317");
+    println!("🚀 rs_send waiting to receive ....");
     axum::serve(listener, app).await.unwrap();
 }
 

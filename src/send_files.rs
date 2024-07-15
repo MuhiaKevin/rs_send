@@ -134,12 +134,16 @@ async fn upload_files(
             .header("Content-Length", file_len)
             .body(body)
             .send()
-        .await?;
+            .await?;
 
         if response.status().is_success() {
             println!("File: {} sent successfully!", file.file_name);
         } else {
-            println!("Failed to send file: {} with status {}", file.file_name, response.status());
+            println!(
+                "Failed to send file: {} with status {}",
+                file.file_name,
+                response.status()
+            );
         }
     }
 
