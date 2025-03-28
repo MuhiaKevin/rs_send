@@ -23,6 +23,7 @@ async fn main() -> anyhow::Result<()> {
             send(files).await?;
         }
         None => {
+            tokio::spawn(async { discovery::receive_connection() });
             tokio::spawn(async { discovery::get_discovered_by_clients() });
             receive_files::start_server().await;
         }
