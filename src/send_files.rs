@@ -1,7 +1,13 @@
 use reqwest::{multipart, Client};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+#[cfg(target_os = "windows")]
+use std::os::windows::fs::MetadataExt;
+
+#[cfg(target_os = "unix")]
 use std::os::unix::fs::MetadataExt;
+
 use std::path::Path;
 // use std::io::BufReader;
 use tokio::fs::File;
@@ -157,7 +163,7 @@ async fn open_files_send(file_args: Vec<String>) -> Vec<OpenFiles> {
         let file_path = Path::new(&file_name);
 
         if file_path.exists() {
-            let file_size = file_path.metadata().unwrap().size();
+            let file_size = file_path.metadata().unwrap().len();
             let id = format!("this_is_id_{}", index);
             let real_file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
 
@@ -191,7 +197,7 @@ fn process_directory(
         } else {
             if entry.path().exists() && entry.path().is_file() && !entry.path().is_symlink() {
                 let id = format!("this_is_id_{}", count);
-                let file_size = path.metadata().unwrap().size();
+                let file_size = path.metadata().unwrap().len();
 
                 let file_path_str = path.to_str().unwrap();
                 let real_file_path = file_path_str.to_string();
